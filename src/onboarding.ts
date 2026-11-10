@@ -1,4 +1,14 @@
+import { z } from 'zod';
+
 import type { AnnotationsAddonState } from './types.ts';
+
+const addonStateSchema = z.object({
+  onboardingDismissed: z.boolean().catch(false),
+  notificationDismissed: z.boolean().catch(false),
+  setupDone: z.boolean().catch(false),
+  setupDialogOpen: z.boolean().catch(false),
+  reviewerName: z.string().catch(''),
+});
 
 /**
  * Onboarding/notification flags live in Storybook's addon state. Without an
@@ -17,6 +27,26 @@ export const ONBOARDING_STATE_DEFAULTS: AnnotationsAddonState = {
   reviewerName: '',
 };
 
+export type StoredAddonState = Partial<AnnotationsAddonState> | undefined;
+
+/**
+ * Decode and sanitize stored addon state.
+ * Guarantees all fields conform to the schema, prevents undefined exceptions on property access,
+ * and resets transient modal states (like setupDialogOpen) so a crashed or refreshed
+ * session never gets permanently stuck with an open dialog on reload.
+ */
+export function sanitizeAddonState(raw: StoredAddonState): AnnotationsAddonState {
+  const parsed = addonStateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ...ONBOARDING_STATE_DEFAULTS };
+  }
+  return {
+    ...parsed.data,
+    setupDialogOpen: false,
+    reviewerName: parsed.data.reviewerName.trim(),
+  };
+}
+
 /** Fallback display name when the reviewer has not named themselves yet. */
 export const DEFAULT_REVIEWER_NAME = 'Reviewer';
 
@@ -25,7 +55,8 @@ export function setReviewerName(state: AnnotationsAddonState, name: string): Ann
 }
 
 export function reviewerNameOrDefault(state: AnnotationsAddonState): string {
-  return state.reviewerName.trim() === '' ? DEFAULT_REVIEWER_NAME : state.reviewerName.trim();
+  const name = state.reviewerName.trim();
+  return name === '' ? DEFAULT_REVIEWER_NAME : name;
 }
 
 export function markSetupDone(state: AnnotationsAddonState): AnnotationsAddonState {

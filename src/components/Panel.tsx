@@ -24,6 +24,7 @@ import {
   markSetupDone,
   openSetupDialog as openSetup,
   reviewerNameOrDefault,
+  sanitizeAddonState,
   setReviewerName,
   shouldShowOnboarding,
 } from '../onboarding.ts';
@@ -85,7 +86,8 @@ export function Panel(): React.ReactElement {
   const theme = useTheme();
   const api = useStorybookApi();
   const params = useParameter<AnnotationsParameters>(PARAM_KEY, {});
-  const [addonState, setAddonState] = useAddonState<AnnotationsAddonState>(ADDON_ID, ONBOARDING_STATE_DEFAULTS);
+  const [rawState, setAddonState] = useAddonState<AnnotationsAddonState>(ADDON_ID, ONBOARDING_STATE_DEFAULTS);
+  const addonState = sanitizeAddonState(rawState);
   const dismissOnboardingCard = (): void => {
     void setAddonState(dismissOnboarding, ONBOARDING_PERSISTENCE);
   };

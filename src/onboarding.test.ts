@@ -10,6 +10,7 @@ import {
   markSetupDone,
   openSetupDialog,
   reviewerNameOrDefault,
+  sanitizeAddonState,
   setReviewerName,
   shouldShowOnboarding,
 } from './onboarding.ts';
@@ -64,4 +65,21 @@ test('reviewer name defaults empty and is stored trimmed', () => {
 test('reviewerNameOrDefault falls back to Reviewer when unset', () => {
   assert.equal(reviewerNameOrDefault(ONBOARDING_STATE_DEFAULTS), 'Reviewer');
   assert.equal(reviewerNameOrDefault(setReviewerName(ONBOARDING_STATE_DEFAULTS, 'Ada')), 'Ada');
+});
+
+test('sanitizeAddonState recovers from corrupted or partial localStorage payloads without crashing', () => {
+  assert.deepEqual(sanitizeAddonState(undefined), ONBOARDING_STATE_DEFAULTS);
+  assert.deepEqual(sanitizeAddonState({}), ONBOARDING_STATE_DEFAULTS);
+
+  // Even if setupDialogOpen was persisted as true during a crash/reload, it is reset to false
+  const recovered = sanitizeAddonState({
+    onboardingDismissed: true,
+    setupDone: true,
+    setupDialogOpen: true,
+    reviewerName: '  Alice  ',
+  });
+  assert.equal(recovered.onboardingDismissed, true);
+  assert.equal(recovered.setupDone, true);
+  assert.equal(recovered.setupDialogOpen, false);
+  assert.equal(recovered.reviewerName, 'Alice');
 });
