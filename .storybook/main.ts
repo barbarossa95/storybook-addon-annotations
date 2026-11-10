@@ -4,6 +4,12 @@ const config = defineMain({
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
   addons: ['@storybook/addon-docs', import.meta.resolve('./local-preset.ts')],
   framework: '@storybook/react-vite',
+  core: {
+    disableWhatsNewNotifications: true,
+  },
+  features: {
+    experimentalReview: true,
+  },
 });
 
 export default config;
