@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — 2026-11-10
+
+### Fixed
+
+- **Resilient localStorage state sanitization and crash recovery.** Legacy or partial persisted state (such as missing or non-string `reviewerName`) previously caused an unhandled `TypeError` (`Cannot read properties of undefined (reading 'trim')`) during panel render, crashing the addon and forcing users to clear `localStorage`. State restored from browser storage is now validated and sanitized through Zod (`sanitizeAddonState`), falling back gracefully to `"Anonymous"` and safe defaults.
+- **Setup dialog modal lockup on reload.** The `setupDialogOpen` flag is no longer restored as open on initial load, preventing a persistent modal loop if Storybook was refreshed while the setup dialog was open.
+
 ## 0.2.0 — 2026-09-26
 
 ### Added

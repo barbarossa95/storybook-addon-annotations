@@ -1,6 +1,6 @@
 {
   "name": "@kylebrodeur/storybook-addon-annotations",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Leave visual annotations and threaded comments on the Storybook canvas, anchored to components or text ranges.",
   "keywords": [
     "storybook",
