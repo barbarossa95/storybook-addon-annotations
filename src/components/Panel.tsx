@@ -19,10 +19,8 @@ import { formatAnnotationTimestamp } from '../format.ts';
 import {
   ONBOARDING_PERSISTENCE,
   ONBOARDING_STATE_DEFAULTS,
-  closeSetupDialog as closeSetupState,
   dismissOnboarding,
   markSetupDone,
-  openSetupDialog as openSetup,
   reviewerNameOrDefault,
   sanitizeAddonState,
   setReviewerName,
@@ -31,6 +29,7 @@ import {
 import { refreshStatuses } from '../manager/status.ts';
 import { nextSelection, selectionAction } from './bulkSelection.ts';
 import { SetupDialog } from './SetupDialog.tsx';
+import { useSetupDialog } from './useSetupDialog.ts';
 import type { ProjectSetupOptions, StoreTracking } from '../server/projectSetup.ts';
 import type {
   AnnotationAnchor,
@@ -88,15 +87,12 @@ export function Panel(): React.ReactElement {
   const params = useParameter<AnnotationsParameters>(PARAM_KEY, {});
   const [rawState, setAddonState] = useAddonState<AnnotationsAddonState>(ADDON_ID, ONBOARDING_STATE_DEFAULTS);
   const addonState = sanitizeAddonState(rawState);
+  const { open: setupDialogOpen, openDialog: openSetupDialog, closeDialog: closeSetupDialog } = useSetupDialog();
+
   const dismissOnboardingCard = (): void => {
     void setAddonState(dismissOnboarding, ONBOARDING_PERSISTENCE);
   };
-  const openSetupDialog = (): void => {
-    void setAddonState(openSetup, ONBOARDING_PERSISTENCE);
-  };
-  const closeSetupDialog = (): void => {
-    void setAddonState(closeSetupState, ONBOARDING_PERSISTENCE);
-  };
+
   const currentUser = params.currentUser ?? reviewerNameOrDefault(addonState);
   const current = api.getCurrentStoryData();
   const storyId = current?.id;
@@ -296,6 +292,7 @@ export function Panel(): React.ReactElement {
           : `Annotations was already registered. ${notes.join(' ')}`,
       );
       setSetupDocsWritten(result.docsWritten);
+      closeSetupDialog();
       setAddonState((state) => markSetupDone(setReviewerName(state, options.reviewerName)), ONBOARDING_PERSISTENCE);
       dismissOnboardingCard();
     } catch (caught) {
@@ -622,7 +619,7 @@ export function Panel(): React.ReactElement {
         })}
       </div>
       <SetupDialog
-        open={addonState.setupDialogOpen}
+        open={setupDialogOpen}
         busy={setupBusy}
         storyId={storyId}
         reviewerName={addonState.reviewerName}

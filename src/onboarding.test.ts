@@ -4,82 +4,72 @@ import test from 'node:test';
 import {
   ONBOARDING_PERSISTENCE,
   ONBOARDING_STATE_DEFAULTS,
-  closeSetupDialog,
   dismissNotification,
   dismissOnboarding,
   markSetupDone,
-  openSetupDialog,
   reviewerNameOrDefault,
   sanitizeAddonState,
   setReviewerName,
   shouldShowOnboarding,
 } from './onboarding.ts';
 
+const DEFAULTS = ONBOARDING_STATE_DEFAULTS;
+
 test('onboarding shows only while it is undismissed and the story has no threads', () => {
-  assert.equal(shouldShowOnboarding(ONBOARDING_STATE_DEFAULTS, 0), true);
-  assert.equal(shouldShowOnboarding(ONBOARDING_STATE_DEFAULTS, 2), false);
-  assert.equal(shouldShowOnboarding(dismissOnboarding(ONBOARDING_STATE_DEFAULTS), 0), false);
+  assert.equal(shouldShowOnboarding(DEFAULTS, 0), true);
+  assert.equal(shouldShowOnboarding(DEFAULTS, 2), false);
+  assert.equal(shouldShowOnboarding(dismissOnboarding(DEFAULTS), 0), false);
 });
 
 test('dismissing one surface preserves the other surface flag', () => {
-  assert.deepEqual(dismissOnboarding(ONBOARDING_STATE_DEFAULTS), {
-    onboardingDismissed: true,
-    notificationDismissed: false,
-    setupDone: false,
-    setupDialogOpen: false,
-    reviewerName: '',
-  });
-  assert.deepEqual(dismissNotification(dismissOnboarding(ONBOARDING_STATE_DEFAULTS)), {
+  assert.deepEqual(dismissOnboarding(DEFAULTS), { ...DEFAULTS, onboardingDismissed: true });
+  assert.deepEqual(dismissNotification(dismissOnboarding(DEFAULTS)), {
+    ...DEFAULTS,
     onboardingDismissed: true,
     notificationDismissed: true,
-    setupDone: false,
-    setupDialogOpen: false,
-    reviewerName: '',
   });
 });
 
-test('first run routes the toolbar to setup until setup completes', () => {
-  assert.equal(ONBOARDING_STATE_DEFAULTS.setupDone, false);
-  const opened = openSetupDialog(ONBOARDING_STATE_DEFAULTS);
-  assert.deepEqual(opened.setupDialogOpen, true);
-  const done = markSetupDone(opened);
-  assert.deepEqual(done.setupDone, true);
-  assert.deepEqual(done.setupDialogOpen, false);
-});
-
-test('closing the dialog keeps setup pending so the toolbar still routes to setup', () => {
-  const closed = closeSetupDialog(openSetupDialog(ONBOARDING_STATE_DEFAULTS));
-  assert.deepEqual(closed.setupDialogOpen, false);
-  assert.deepEqual(closed.setupDone, false);
+test('setup starts pending and markSetupDone only flips setupDone', () => {
+  assert.equal(DEFAULTS.setupDone, false);
+  assert.deepEqual(markSetupDone(DEFAULTS), { ...DEFAULTS, setupDone: true });
 });
 
 test('onboarding state persists in the manager store so it survives a reload', () => {
   assert.deepEqual(ONBOARDING_PERSISTENCE, { persistence: 'permanent' });
 });
 
+test('the setup dialog open flag is not part of persisted state', () => {
+  assert.equal('setupDialogOpen' in DEFAULTS, false);
+});
+
 test('reviewer name defaults empty and is stored trimmed', () => {
-  assert.equal(ONBOARDING_STATE_DEFAULTS.reviewerName, '');
-  assert.equal(setReviewerName(ONBOARDING_STATE_DEFAULTS, '  Reviewer  ').reviewerName, 'Reviewer');
+  assert.equal(DEFAULTS.reviewerName, '');
+  assert.equal(setReviewerName(DEFAULTS, '  Reviewer  ').reviewerName, 'Reviewer');
 });
 
 test('reviewerNameOrDefault falls back to Reviewer when unset', () => {
-  assert.equal(reviewerNameOrDefault(ONBOARDING_STATE_DEFAULTS), 'Reviewer');
-  assert.equal(reviewerNameOrDefault(setReviewerName(ONBOARDING_STATE_DEFAULTS, 'Ada')), 'Ada');
+  assert.equal(reviewerNameOrDefault(DEFAULTS), 'Reviewer');
+  assert.equal(reviewerNameOrDefault(setReviewerName(DEFAULTS, 'Ada')), 'Ada');
 });
 
 test('sanitizeAddonState recovers from corrupted or partial localStorage payloads without crashing', () => {
-  assert.deepEqual(sanitizeAddonState(undefined), ONBOARDING_STATE_DEFAULTS);
-  assert.deepEqual(sanitizeAddonState({}), ONBOARDING_STATE_DEFAULTS);
+  assert.deepEqual(sanitizeAddonState(undefined), DEFAULTS);
+  assert.deepEqual(sanitizeAddonState({}), DEFAULTS);
 
-  // Even if setupDialogOpen was persisted as true during a crash/reload, it is reset to false
   const recovered = sanitizeAddonState({
     onboardingDismissed: true,
     setupDone: true,
-    setupDialogOpen: true,
     reviewerName: '  Alice  ',
   });
-  assert.equal(recovered.onboardingDismissed, true);
-  assert.equal(recovered.setupDone, true);
-  assert.equal(recovered.setupDialogOpen, false);
-  assert.equal(recovered.reviewerName, 'Alice');
+  assert.deepEqual(recovered, { ...DEFAULTS, onboardingDismissed: true, setupDone: true, reviewerName: 'Alice' });
+});
+
+test('sanitizeAddonState drops a legacy persisted setupDialogOpen so old storage cannot reopen the dialog', () => {
+  // A payload written by a version that still persisted the flag. Passed as a variable,
+  // not a literal, because the stored shape no longer declares the key.
+  const legacy = { setupDone: true, setupDialogOpen: true };
+  const sanitized = sanitizeAddonState(legacy);
+  assert.equal('setupDialogOpen' in sanitized, false);
+  assert.equal(sanitized.setupDone, true);
 });

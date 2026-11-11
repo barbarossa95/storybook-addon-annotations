@@ -88,8 +88,6 @@ export interface AnnotationsAddonState {
   notificationDismissed: boolean;
   /** True once the setup dialog has been completed at least once. */
   setupDone: boolean;
-  /** Shared open flag so the panel and the toolbar can both open the setup dialog. */
-  setupDialogOpen: boolean;
   /** Display name for messages authored from the panel; chosen during setup. */
   reviewerName: string;
 }

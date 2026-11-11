@@ -6,7 +6,6 @@ const addonStateSchema = z.object({
   onboardingDismissed: z.boolean().catch(false),
   notificationDismissed: z.boolean().catch(false),
   setupDone: z.boolean().catch(false),
-  setupDialogOpen: z.boolean().catch(false),
   reviewerName: z.string().catch(''),
 });
 
@@ -23,7 +22,6 @@ export const ONBOARDING_STATE_DEFAULTS: AnnotationsAddonState = {
   onboardingDismissed: false,
   notificationDismissed: false,
   setupDone: false,
-  setupDialogOpen: false,
   reviewerName: '',
 };
 
@@ -31,9 +29,9 @@ export type StoredAddonState = Partial<AnnotationsAddonState> | undefined;
 
 /**
  * Decode and sanitize stored addon state.
- * Guarantees all fields conform to the schema, prevents undefined exceptions on property access,
- * and resets transient modal states (like setupDialogOpen) so a crashed or refreshed
- * session never gets permanently stuck with an open dialog on reload.
+ * Guarantees all fields conform to the schema and prevents undefined exceptions on property
+ * access. Unknown keys are stripped, so a legacy `setupDialogOpen` from older payloads is
+ * dropped; the dialog's open flag now lives in memory (see setupDialogStore.ts).
  */
 export function sanitizeAddonState(raw: StoredAddonState): AnnotationsAddonState {
   const parsed = addonStateSchema.safeParse(raw);
@@ -42,7 +40,6 @@ export function sanitizeAddonState(raw: StoredAddonState): AnnotationsAddonState
   }
   return {
     ...parsed.data,
-    setupDialogOpen: false,
     reviewerName: parsed.data.reviewerName.trim(),
   };
 }
@@ -60,15 +57,7 @@ export function reviewerNameOrDefault(state: AnnotationsAddonState): string {
 }
 
 export function markSetupDone(state: AnnotationsAddonState): AnnotationsAddonState {
-  return { ...state, setupDone: true, setupDialogOpen: false };
-}
-
-export function openSetupDialog(state: AnnotationsAddonState): AnnotationsAddonState {
-  return { ...state, setupDialogOpen: true };
-}
-
-export function closeSetupDialog(state: AnnotationsAddonState): AnnotationsAddonState {
-  return { ...state, setupDialogOpen: false };
+  return { ...state, setupDone: true };
 }
 
 /**
